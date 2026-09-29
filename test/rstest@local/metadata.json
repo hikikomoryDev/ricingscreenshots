@@ -1,0 +1,7 @@
+{
+  "uuid": "rstest@local",
+  "name": "RicingScreenshots test driver",
+  "description": "Runs a scenario inside a headless shell: moves the pointer, presses keys, reads the clipboard, takes screenshots.",
+  "shell-version": ["49", "50"],
+  "version": 1
+}

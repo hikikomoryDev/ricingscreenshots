@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.ricingscreenshots" path="/org/gnome/shell/extensions/ricingscreenshots/">
+    <key name="shortcut" type="as">
+      <default><![CDATA[['<Shift><Super>s']]]></default>
+      <summary>Shortcut that starts an area screenshot</summary>
+    </key>
+    <key name="accent-color" type="s">
+      <default>'rgb(110,231,200)'</default>
+      <summary>Color of the selection frame and the active tool</summary>
+    </key>
+    <key name="dim-opacity" type="d">
+      <range min="0" max="0.9"/>
+      <default>0.45</default>
+      <summary>How much the screen outside the selection is darkened</summary>
+    </key>
+    <key name="ask-to-edit" type="b">
+      <default>true</default>
+      <summary>After a capture, ask whether to edit it</summary>
+    </key>
+    <key name="show-notification" type="b">
+      <default>true</default>
+      <summary>Show a notification when a screenshot is copied</summary>
+    </key>
+    <key name="play-sound" type="b">
+      <default>true</default>
+      <summary>Play the camera shutter sound</summary>
+    </key>
+    <key name="tool" type="s">
+      <choices>
+        <choice value="pen"/>
+        <choice value="marker"/>
+        <choice value="arrow"/>
+        <choice value="rect"/>
+        <choice value="crop"/>
+      </choices>
+      <default>'pen'</default>
+      <summary>Last used editor tool</summary>
+    </key>
+    <key name="pen-color" type="s">
+      <default>'rgb(255,59,48)'</default>
+      <summary>Last used drawing color</summary>
+    </key>
+    <key name="pen-width" type="i">
+      <range min="1" max="32"/>
+      <default>4</default>
+      <summary>Last used line width, in logical pixels</summary>
+    </key>
+  </schema>
+</schemalist>

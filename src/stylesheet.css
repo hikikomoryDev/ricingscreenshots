@@ -1,0 +1,129 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
+
+.rs-size-label {
+    background-color: rgba(20, 20, 24, 0.85);
+    color: #f2f2f5;
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 10pt;
+    font-feature-settings: "tnum";
+}
+
+/* The card that asks what to do with the capture. */
+.rs-card {
+    background-color: rgba(28, 28, 32, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 16px;
+    padding: 10px;
+    spacing: 12px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+
+.rs-thumb {
+    border-radius: 8px;
+}
+
+.rs-card-side {
+    spacing: 8px;
+    padding: 2px 4px 2px 0;
+}
+
+.rs-card-title {
+    color: #f2f2f5;
+    font-weight: bold;
+    font-size: 10.5pt;
+}
+
+.rs-card-buttons {
+    spacing: 8px;
+}
+
+.rs-card-button {
+    background-color: rgba(255, 255, 255, 0.10);
+    color: #f2f2f5;
+    border-radius: 999px;
+    padding: 7px 18px;
+    font-weight: bold;
+}
+
+.rs-card-button:hover {
+    background-color: rgba(255, 255, 255, 0.18);
+}
+
+.rs-card-edit:hover {
+    box-shadow: inset 0 0 0 99px rgba(255, 255, 255, 0.15);
+}
+
+/* The editor toolbar. */
+.rs-toolbar {
+    background-color: rgba(28, 28, 32, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 14px;
+    padding: 6px;
+    spacing: 6px;
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+
+.rs-group {
+    spacing: 2px;
+    padding-right: 6px;
+    border-right: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.rs-group:last-child {
+    padding-right: 0;
+    border-right-width: 0;
+}
+
+.rs-tool,
+.rs-width {
+    color: #f2f2f5;
+    border-radius: 9px;
+    width: 34px;
+    height: 34px;
+}
+
+.rs-tool:hover,
+.rs-width:hover,
+.rs-swatch:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.rs-width-dot {
+    background-color: #f2f2f5;
+}
+
+.rs-swatch {
+    width: 26px;
+    height: 26px;
+    border-radius: 99px;
+    border: 2px solid transparent;
+    margin: 4px 1px;
+}
+
+.rs-swatch-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 99px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.rs-copy {
+    border-radius: 9px;
+    padding: 0 16px;
+    height: 34px;
+    font-weight: bold;
+    margin-left: 4px;
+}
+
+.rs-copy:hover {
+    box-shadow: inset 0 0 0 99px rgba(255, 255, 255, 0.15);
+}
+
+.rs-handle {
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    background-color: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.55);
+}
