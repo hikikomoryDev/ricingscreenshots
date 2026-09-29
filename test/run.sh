@@ -57,6 +57,8 @@ timeout 120 dbus-run-session -- bash -c '
   gsettings set org.gnome.desktop.interface color-scheme "prefer-dark"
   gsettings set org.gnome.desktop.interface gtk-theme "Yaru-prussiangreen-dark"
   gsettings set org.gnome.desktop.interface enable-animations true
+  # Fractional scales (125 %), as Ubuntu allows them.
+  gsettings set org.gnome.mutter experimental-features "['scale-monitor-framebuffer']"
   # Test shells share the real sound server: keep them silent.
   gsettings set org.gnome.desktop.sound event-sounds false
   gsettings set org.gnome.desktop.sound input-feedback-sounds false

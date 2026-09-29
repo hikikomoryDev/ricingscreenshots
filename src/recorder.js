@@ -21,6 +21,10 @@ Gio._promisify(Gio.File.prototype, 'delete_async');
 
 const ScreencastProxy = Gio.DBusProxy.makeProxyWrapper(loadInterfaceXML('org.gnome.Shell.Screencast'));
 const FRAME = 2;
+// Space between the area and its frame: at fractional scales (125 %) the
+// recorded area is rounded out to whole pixels and would catch a frame
+// drawn right against it.
+const FRAME_GAP = 4;
 const RED = 'rgb(255,59,48)';
 
 // Encoders, best first. GNOME's recorder films the area and hands the
@@ -37,7 +41,7 @@ const ENCODERS = [
     {
         id: 'vp8', ext: 'webm', mux: 'webmmux',
         video: 'videoconvert chroma-mode=none dither=none matrix-mode=output-only n-threads=%T ! queue ! ' +
-            'vp8enc cpu-used=16 max-quantizer=17 deadline=1 keyframe-mode=disabled threads=%T ' +
+            'vp8enc cpu-used=16 max-quantizer=17 deadline=1 keyframe-mode=auto keyframe-max-dist=60 threads=%T ' +
             'static-threshold=1000 buffer-size=20000',
     },
 ];
@@ -304,15 +308,16 @@ export class Recorder {
         this._stopButton = button;
     }
 
-    // A thin red frame just outside the area, so it is never in the video.
+    // A thin red frame a little outside the area, so it is never in the video.
     _showFrame(rect) {
+        const out = FRAME + FRAME_GAP;
         this._frame = new St.Widget({
             style: `border: ${FRAME}px solid ${RED};`,
             reactive: false,
-            x: rect.x - FRAME,
-            y: rect.y - FRAME,
-            width: rect.w + 2 * FRAME,
-            height: rect.h + 2 * FRAME,
+            x: rect.x - out,
+            y: rect.y - out,
+            width: rect.w + 2 * out,
+            height: rect.h + 2 * out,
         });
         Main.layoutManager.uiGroup.add_child(this._frame);
     }
