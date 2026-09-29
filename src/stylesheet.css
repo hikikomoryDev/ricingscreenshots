@@ -160,3 +160,59 @@
 .rs-sound:checked {
     color: #ff6b61;
 }
+
+/* Before a recording: Rec / Cancel by the picked area. */
+.rs-rec-card {
+    spacing: 8px;
+    padding: 8px 10px;
+}
+
+.rs-rec-button {
+    background-color: rgb(229, 57, 53);
+    color: #ffffff;
+}
+
+.rs-rec-button:hover {
+    background-color: rgb(244, 81, 77);
+}
+
+.rs-rec-box,
+.rs-stop-box {
+    spacing: 8px;
+}
+
+.rs-rec-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 99px;
+    background-color: #ffffff;
+}
+
+.rs-card-hint {
+    color: rgba(242, 242, 245, 0.55);
+    font-size: 9pt;
+    padding: 0 4px;
+}
+
+/* While recording: Stop with the time, by the area. */
+.rs-stop {
+    background-color: rgba(28, 28, 32, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+    color: #ffffff;
+    font-weight: bold;
+    padding: 7px 16px 7px 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    font-feature-settings: "tnum";
+}
+
+.rs-stop:hover {
+    background-color: rgba(52, 52, 58, 0.98);
+}
+
+.rs-stop-square {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background-color: rgb(255, 69, 58);
+}

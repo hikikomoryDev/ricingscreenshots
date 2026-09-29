@@ -29,9 +29,10 @@ inside, or drag a new frame outside it. Drawings stay pinned to the picture.
 ## Video with sound
 
 **Super+V** records an area as video with the system sound (what you hear,
-not the microphone). Pick the area as for a screenshot; a red frame marks it
-and a red pill with the time sits in the top bar. **Super+V** again, or a
-click on the pill, stops. A card then offers **Save to Videos** (Enter),
+not the microphone). Pick the area as for a screenshot, then press **Rec**
+(or Enter); drag again first to change it. While recording, a red frame marks
+the area, a **Stop** button with the time sits just outside it and a red pill
+in the top bar; any of them, or **Super+V** again, stops. A card then offers **Save to Videos** (Enter),
 **Save as…** (the desktop's own save dialog) or **Discard**, and a switch to
 save it **without sound** (or press M).
 

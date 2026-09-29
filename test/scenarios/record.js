@@ -19,6 +19,19 @@ export default async function (t) {
         await t.key(Clutter.KEY_v, [Clutter.KEY_Super_L], 700);
         t.log(`${label}: picking=${!!t.session()}`);
         await t.drag(500, 250, 1301, 751);
+        await t.wait(1500);
+        t.log(`  picked: mode=${t.session()?._mode} recording=${rec.recording}`);
+        if (label === 'first') {
+            await t.shot('01-armed');
+            // Changing the area before recording.
+            await t.drag(450, 220, 1251, 701);
+            t.log(`  re-picked: ${JSON.stringify(t.session()?.rect)} mode=${t.session()?._mode}`);
+            const recButton = t.session()._card.get_children()[0];
+            const [bx, by] = recButton.get_transformed_position();
+            await t.click(bx + 20, by + 12);
+        } else {
+            await t.key(Clutter.KEY_Return, [], 200);
+        }
         for (let i = 0; i < 200 && !rec.recording; i++)
             await t.wait(50);
         t.log(`  recording=${rec.recording} sound=${rec._take?.sound} ext=${rec._take?.ext}`);
@@ -26,7 +39,14 @@ export default async function (t) {
             await t.move(600 + i * 50, 400 + (i % 3) * 60, 250);
         if (label === 'first')
             await t.shot('02-recording');
-        await t.key(Clutter.KEY_v, [Clutter.KEY_Super_L], 1500);
+        if (label === 'first') {
+            const stop = rec._stopButton;
+            t.log(`  stop button: visible=${stop?.visible} label=${rec._stopLabel?.text}`);
+            const [sx, sy] = stop.get_transformed_position();
+            await t.click(sx + 30, sy + 14, t.Clutter.BUTTON_PRIMARY, 1500);
+        } else {
+            await t.key(Clutter.KEY_v, [Clutter.KEY_Super_L], 1500);
+        }
         t.log(`  after stop: state=${rec._state}`);
         if (mute)
             await t.key(Clutter.KEY_m, [], 300);

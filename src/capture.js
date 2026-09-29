@@ -274,6 +274,10 @@ export class CaptureSession {
             this.destroy();
             return Clutter.EVENT_STOP;
         }
+        if (this._mode === 'armed' && (key === Clutter.KEY_Return || key === Clutter.KEY_KP_Enter)) {
+            this._startRecording();
+            return Clutter.EVENT_STOP;
+        }
         if (this._mode === 'ask' && (key === Clutter.KEY_Return || key === Clutter.KEY_KP_Enter || key === Clutter.KEY_e)) {
             this._startEdit();
             return Clutter.EVENT_STOP;
@@ -296,6 +300,12 @@ export class CaptureSession {
         }
         if (button !== Clutter.BUTTON_PRIMARY)
             return Clutter.EVENT_PROPAGATE;
+        if (this._mode === 'armed') {
+            // Dragging again picks another area before recording.
+            this._card?.destroy();
+            this._card = null;
+            this._mode = 'select';
+        }
         const [x, y] = event.get_coords();
         this._drag = {x0: Math.floor(x), y0: Math.floor(y)};
         return Clutter.EVENT_STOP;
@@ -323,18 +333,48 @@ export class CaptureSession {
             this.setRect(null);
             return Clutter.EVENT_STOP;
         }
+        this.setRect(rect);
         if (this._onArea) {
-            const onArea = this._onArea;
-            this.destroy();
-            onArea(rect);
+            this._arm();
             return Clutter.EVENT_STOP;
         }
-        this.setRect(rect);
         this._captureSelection().catch(e => {
             logError(e, 'RicingScreenshots: capture failed');
             this.destroy();
         });
         return Clutter.EVENT_STOP;
+    }
+
+    // The area for a recording is picked; nothing records until Rec.
+    _arm() {
+        this._mode = 'armed';
+        const card = new St.BoxLayout({style_class: 'rs-card rs-rec-card', reactive: true});
+        const rec = new St.Button({style_class: 'rs-card-button rs-rec-button', accessible_name: 'Start recording (Enter)'});
+        const recBox = new St.BoxLayout({style_class: 'rs-rec-box'});
+        recBox.add_child(new St.Widget({style_class: 'rs-rec-dot', y_align: Clutter.ActorAlign.CENTER}));
+        recBox.add_child(new St.Label({text: 'Rec', y_align: Clutter.ActorAlign.CENTER}));
+        rec.child = recBox;
+        rec.connect('clicked', () => this._startRecording());
+        const cancel = new St.Button({style_class: 'rs-card-button', label: 'Cancel', accessible_name: 'Cancel (Esc)'});
+        cancel.connect('clicked', () => this.destroy());
+        card.add_child(rec);
+        card.add_child(cancel);
+        card.add_child(new St.Label({
+            text: 'Enter · Esc · drag again to change',
+            style_class: 'rs-card-hint',
+            y_align: Clutter.ActorAlign.CENTER,
+        }));
+        this._controls.add_child(card);
+        placeNear(card, this._rect);
+        this._card = card;
+    }
+
+    _startRecording() {
+        if (this._mode !== 'armed')
+            return;
+        const {_onArea: onArea, _rect: rect} = this;
+        this.destroy();
+        onArea(rect);
     }
 
     async _captureSelection() {

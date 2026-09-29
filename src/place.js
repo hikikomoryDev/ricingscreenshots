@@ -31,6 +31,7 @@ export function monitorFor(rect) {
 
 // Puts a floating box under the rectangle, or above it, or inside its
 // bottom edge when neither fits, and keeps it on the rectangle's monitor.
+// Returns whether the box ended up clear of the rectangle.
 export function placeNear(actor, rect, gap = 12) {
     const m = monitorFor(rect);
     const [, , natW, natH] = actor.get_preferred_size();
@@ -43,4 +44,6 @@ export function placeNear(actor, rect, gap = 12) {
     x = Math.min(Math.max(x, m.x + gap), m.x + m.width - natW - gap);
     y = Math.min(Math.max(y, m.y + gap), m.y + m.height - natH - gap);
     actor.set_position(Math.round(x), Math.round(y));
+    return y >= rect.y + rect.h || y + natH <= rect.y ||
+        x >= rect.x + rect.w || x + natW <= rect.x;
 }

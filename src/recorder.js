@@ -278,11 +278,30 @@ export class Recorder {
         this._showFrame(rect);
         this._indicator = new RecordingIndicator(() => this.stop());
         Main.panel.addToStatusArea('ricingscreenshots-recording', this._indicator, 0, 'right');
+        this._showStopButton(rect);
         this._tickId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1, () => {
             this._seconds++;
             this._indicator?.setSeconds(this._seconds);
+            if (this._stopLabel)
+                this._stopLabel.text = `Stop · ${formatTime(this._seconds)}`;
             return GLib.SOURCE_CONTINUE;
         });
+    }
+
+    // Stop by the area, outside it so it never shows in the video; when the
+    // area leaves no room around it, the top bar pill and the shortcut do.
+    _showStopButton(rect) {
+        const button = new St.Button({style_class: 'rs-stop', can_focus: true, accessible_name: 'Stop recording'});
+        const box = new St.BoxLayout({style_class: 'rs-stop-box'});
+        box.add_child(new St.Widget({style_class: 'rs-stop-square', y_align: Clutter.ActorAlign.CENTER}));
+        this._stopLabel = new St.Label({text: 'Stop · 0:00', y_align: Clutter.ActorAlign.CENTER});
+        box.add_child(this._stopLabel);
+        button.child = box;
+        button.connect('clicked', () => this.stop().catch(e => logError(e)));
+        Main.layoutManager.addTopChrome(button);
+        if (!placeNear(button, rect, 10))
+            button.hide();
+        this._stopButton = button;
     }
 
     // A thin red frame just outside the area, so it is never in the video.
@@ -325,6 +344,9 @@ export class Recorder {
         this._indicator = null;
         this._frame?.destroy();
         this._frame = null;
+        this._stopButton?.destroy();
+        this._stopButton = null;
+        this._stopLabel = null;
     }
 
     _dropTake() {
