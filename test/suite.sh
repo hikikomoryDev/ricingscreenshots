@@ -5,7 +5,7 @@
 V=$1
 T=$(dirname "$(readlink -f "$0")")
 cd "$T"
-SCEN="basic edit prefs"
+SCEN="basic edit prefs keys"
 for s in $SCEN; do
     if [ "$V" = 50 ]; then
         ./run.sh scenarios/$s.js > /dev/null 2>&1; log=out/$s/shell.log

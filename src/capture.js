@@ -107,6 +107,15 @@ class Shade {
     }
 }
 
+// Thumbnails keep a small copy, not the whole capture.
+function shrink(pixbuf, maxW, maxH) {
+    const k = Math.min(1, maxW / pixbuf.width, maxH / pixbuf.height);
+    if (k >= 1)
+        return pixbuf;
+    return pixbuf.scale_simple(Math.max(1, Math.round(pixbuf.width * k)),
+        Math.max(1, Math.round(pixbuf.height * k)), GdkPixbuf.InterpType.BILINEAR);
+}
+
 function imageContent(pixbuf) {
     if (!pixbuf.get_has_alpha())
         pixbuf = pixbuf.add_alpha(false, 0, 0, 0);
@@ -347,7 +356,7 @@ export class CaptureSession {
                 source,
                 title,
                 body: 'Copied to the clipboard',
-                gicon: imageContent(pixbuf),
+                gicon: imageContent(shrink(pixbuf, 256, 256)),
                 isTransient: true,
             });
             source.addNotification(notification);
@@ -374,7 +383,7 @@ export class CaptureSession {
             height: Math.max(1, Math.round(pixbuf.height * k)),
             y_align: Clutter.ActorAlign.CENTER,
         });
-        thumb.set_content(imageContent(pixbuf));
+        thumb.set_content(imageContent(shrink(pixbuf, THUMB_W * this._scale * 2, THUMB_H * this._scale * 2)));
         card.add_child(thumb);
 
         const side = new St.BoxLayout({orientation: Clutter.Orientation.VERTICAL, style_class: 'rs-card-side'});
