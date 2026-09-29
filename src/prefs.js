@@ -10,7 +10,15 @@ import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/ex
 
 import {parseColor} from './util.js';
 
-const DEFAULT_SHORTCUT = '<Shift><Super>s';
+const SHORTCUTS = {
+    'shortcut': {title: 'Shortcut', subtitle: 'Starts an area screenshot', fallback: '<Shift><Super>s', name: 'Shift+Super+S'},
+    'record-shortcut': {
+        title: 'Record video',
+        subtitle: 'Records an area with the system sound; press again to stop',
+        fallback: '<Super>v',
+        name: 'Super+V',
+    },
+};
 export default class RicingScreenshotsPrefs extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
@@ -25,7 +33,7 @@ export default class RicingScreenshotsPrefs extends ExtensionPreferences {
             description: 'Drag over an area and it is copied to the clipboard at once.',
         });
         page.add(capture);
-        capture.add(this._shortcutRow(window, settings));
+        capture.add(this._shortcutRow(window, settings, 'shortcut'));
         capture.add(this._switch(settings, 'take-print', 'Use the Print key',
             'Print opens RicingScreenshots instead of GNOME’s screenshot tool. ' +
             'Turn off to give it back; GNOME’s settings are never changed'));
@@ -34,6 +42,15 @@ export default class RicingScreenshotsPrefs extends ExtensionPreferences {
         capture.add(this._switch(settings, 'show-notification', 'Notification',
             '“Screenshot captured” at the top of the screen'));
         capture.add(this._switch(settings, 'play-sound', 'Shutter sound', null));
+
+        const video = new Adw.PreferencesGroup({
+            title: 'Video',
+            description: 'After stopping, a card offers Save to Videos or Save as…, with or without the sound. ' +
+                'Super+V usually opens GNOME’s notification list; Super+M still does.',
+        });
+        page.add(video);
+        video.add(this._shortcutRow(window, settings, 'record-shortcut'));
+        video.add(this._switch(settings, 'record-cursor', 'Show the pointer', null));
 
         const look = new Adw.PreferencesGroup({title: 'Look'});
         page.add(look);
@@ -88,36 +105,33 @@ export default class RicingScreenshotsPrefs extends ExtensionPreferences {
         return row;
     }
 
-    _shortcutRow(window, settings) {
-        const row = new Adw.ActionRow({
-            title: 'Shortcut',
-            subtitle: 'Starts an area screenshot',
-            activatable: true,
-        });
+    _shortcutRow(window, settings, key) {
+        const {title, subtitle, fallback, name} = SHORTCUTS[key];
+        const row = new Adw.ActionRow({title, subtitle, activatable: true});
         const label = new Gtk.ShortcutLabel({
             disabled_text: 'Off',
             valign: Gtk.Align.CENTER,
         });
         const sync = () => {
-            label.accelerator = settings.get_strv('shortcut')[0] ?? '';
+            label.accelerator = settings.get_strv(key)[0] ?? '';
         };
         sync();
-        settings.connect('changed::shortcut', sync);
+        settings.connect(`changed::${key}`, sync);
         const reset = new Gtk.Button({
             icon_name: 'edit-undo-symbolic',
             valign: Gtk.Align.CENTER,
-            tooltip_text: 'Back to Shift+Super+S',
+            tooltip_text: `Back to ${name}`,
             css_classes: ['flat'],
         });
-        reset.connect('clicked', () => settings.set_strv('shortcut', [DEFAULT_SHORTCUT]));
+        reset.connect('clicked', () => settings.set_strv(key, [fallback]));
         row.add_suffix(label);
         row.add_suffix(reset);
-        row.connect('activated', () => this._askShortcut(window, settings));
+        row.connect('activated', () => this._askShortcut(window, settings, key));
         return row;
     }
 
     // A small dialog that takes the next key combination.
-    _askShortcut(window, settings) {
+    _askShortcut(window, settings, key) {
         const dialog = new Adw.Dialog({title: 'Set shortcut', content_width: 380});
         const box = new Gtk.Box({
             orientation: Gtk.Orientation.VERTICAL,
@@ -148,12 +162,12 @@ export default class RicingScreenshotsPrefs extends ExtensionPreferences {
                 return Gdk.EVENT_STOP;
             }
             if (!mask && lower === Gdk.KEY_BackSpace) {
-                settings.set_strv('shortcut', []);
+                settings.set_strv(key, []);
                 dialog.close();
                 return Gdk.EVENT_STOP;
             }
-            // Print alone is the switch below the shortcut.
-            if (!mask && lower === Gdk.KEY_Print) {
+            // Print alone is the switch below the screenshot shortcut.
+            if (key === 'shortcut' && !mask && lower === Gdk.KEY_Print) {
                 settings.set_boolean('take-print', true);
                 dialog.close();
                 return Gdk.EVENT_STOP;
@@ -167,7 +181,7 @@ export default class RicingScreenshotsPrefs extends ExtensionPreferences {
                 return Gdk.EVENT_STOP;
             if (!Gtk.accelerator_valid(lower, mask) && !standalone)
                 return Gdk.EVENT_STOP;
-            settings.set_strv('shortcut', [Gtk.accelerator_name_with_keycode(null, lower, keycode, mask)]);
+            settings.set_strv(key, [Gtk.accelerator_name_with_keycode(null, lower, keycode, mask)]);
             dialog.close();
             return Gdk.EVENT_STOP;
         });

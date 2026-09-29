@@ -10,6 +10,23 @@
       <summary>Print opens RicingScreenshots instead of GNOME's screenshot tool</summary>
       <description>Borrows whatever key GNOME uses to take a screenshot while the extension is on; GNOME's settings are not changed.</description>
     </key>
+    <key name="record-shortcut" type="as">
+      <default><![CDATA[['<Super>v']]]></default>
+      <summary>Shortcut that records an area of the screen with the system sound; pressed again it stops</summary>
+    </key>
+    <key name="record-cursor" type="b">
+      <default>true</default>
+      <summary>Show the pointer in recordings</summary>
+    </key>
+    <key name="record-pipeline" type="s">
+      <default>''</default>
+      <summary>Internal: the encoder that last worked on this computer</summary>
+    </key>
+    <key name="toggle-message-tray" type="as">
+      <default>[]</default>
+      <summary>Internal: GNOME's notification list keys minus the recording shortcut</summary>
+      <description>Written by the extension while it holds a key GNOME also uses for the notification list; not a setting.</description>
+    </key>
     <key name="accent-color" type="s">
       <default>'rgb(110,231,200)'</default>
       <summary>Color of the selection frame and the active tool</summary>

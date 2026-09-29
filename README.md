@@ -26,6 +26,20 @@ Ctrl+Z undo · Ctrl+Shift+Z redo.
 Crop by dragging the edges or corners of the frame, move it by dragging
 inside, or drag a new frame outside it. Drawings stay pinned to the picture.
 
+## Video with sound
+
+**Super+V** records an area as video with the system sound (what you hear,
+not the microphone). Pick the area as for a screenshot; a red frame marks it
+and a red pill with the time sits in the top bar. **Super+V** again, or a
+click on the pill, stops. A card then offers **Save to Videos** (Enter),
+**Save as…** (the desktop's own save dialog) or **Discard**, and a switch to
+save it **without sound** (or press M).
+
+The video is recorded by GNOME's own screen recorder, with the sound added;
+the encoder is H.264/MP4 where GStreamer has one, VP8/WebM otherwise. GNOME
+opens the notification list with Super+V and Super+M; while the extension
+is on, Super+M still does, and GNOME's settings are not changed.
+
 ## Settings
 
 Out of the box RicingScreenshots borrows GNOME's screenshot key (Print) while
@@ -38,7 +52,8 @@ the accent color and how much the rest of the screen is darkened.
 ## Privacy
 
 The extension only writes the screenshots you take to the clipboard. It
-never reads the clipboard, saves no files and sends nothing anywhere.
+never reads the clipboard and sends nothing anywhere. Files are written only
+when you save a recording.
 
 ## Install
 

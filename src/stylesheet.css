@@ -127,3 +127,36 @@
     background-color: #ffffff;
     border: 1px solid rgba(0, 0, 0, 0.55);
 }
+
+/* The card after a recording stops. */
+.rs-save-card {
+    spacing: 4px;
+    padding: 14px 16px;
+}
+
+.rs-card-info {
+    color: rgba(242, 242, 245, 0.7);
+    font-size: 10pt;
+    padding-bottom: 6px;
+}
+
+.rs-card-discard {
+    color: #ff6b61;
+}
+
+.rs-sound {
+    color: #f2f2f5;
+    background-color: rgba(255, 255, 255, 0.06);
+    border-radius: 999px;
+    padding: 5px 12px 5px 8px;
+    margin-bottom: 6px;
+    spacing: 6px;
+}
+
+.rs-sound:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.rs-sound:checked {
+    color: #ff6b61;
+}

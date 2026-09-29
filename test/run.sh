@@ -11,6 +11,9 @@ ROOT=${RSTEST_ROOT:-$HOME/.cache/ricingscreenshots-test}
 rm -rf "$ROOT" "$OUT"
 glib-compile-schemas "$T/../src/schemas"
 mkdir -p "$ROOT"/{data,config,cache}/ "$ROOT/data/gnome-shell/extensions" "$OUT"
+# Recordings go to a Videos folder inside the test root, never the real one.
+mkdir -p "$ROOT/videos"
+echo "XDG_VIDEOS_DIR=\"$ROOT/videos\"" > "$ROOT/config/user-dirs.dirs"
 if [ -n "${ZIP:-}" ]; then
     # As extensions.gnome.org installs it: unpack the release zip and compile
     # its schema (the shell's downloader does that step).
@@ -36,6 +39,9 @@ ln -s "$T/rstest@local" "$ROOT/data/gnome-shell/extensions/rstest@local"
 export XDG_DATA_HOME=$ROOT/data XDG_CONFIG_HOME=$ROOT/config XDG_CACHE_HOME=$ROOT/cache
 export RSTEST_SCENARIO=$SCEN RSTEST_OUT=$OUT RSTEST_EXTRA=${3:-} RSTEST_WALL=${RSTEST_WALL:-}
 export RSTEST_FAVS=${RSTEST_FAVS:-'["org.gnome.Characters.desktop", "org.gnome.clocks.desktop", "org.gnome.Ptyxis.desktop", "org.gnome.Loupe.desktop", "org.gnome.TextEditor.desktop", "org.gnome.Nautilus.desktop", "org.gnome.Papers.desktop", "org.gnome.Calculator.desktop", "org.gnome.Logs.desktop", "org.gnome.DiskUtility.desktop"]'}
+# GTK programs started on the test bus (the recording service) would wait
+# 25 s for a keyring through the settings portal; there is none here.
+export GDK_DEBUG=no-portals
 export GSETTINGS_SCHEMA_DIR_EXTRA=$T/../src/schemas
 unset DISPLAY WAYLAND_DISPLAY
 

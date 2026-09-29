@@ -140,22 +140,29 @@ function getSource() {
 }
 
 export class CaptureSession {
-    constructor(settings, path, onClosed) {
+    // With onArea the session only picks an area on the live screen (for a
+    // recording) and hands it over instead of taking a picture.
+    constructor(settings, path, onClosed, {onArea = null} = {}) {
         this._settings = settings;
         this._path = path;
         this._onClosed = onClosed;
+        this._onArea = onArea;
         this._rect = null;
         this._drag = null;
         this._mode = 'select';
     }
 
     async open() {
-        const shooter = new Shell.Screenshot();
-        const [content, scale] = await shooter.screenshot_stage_to_content();
-        if (this._destroyed)
-            return;
-        this._content = content;
-        this._scale = scale;
+        if (this._onArea) {
+            this._scale = St.ThemeContext.get_for_stage(global.stage).scale_factor;
+        } else {
+            const shooter = new Shell.Screenshot();
+            const [content, scale] = await shooter.screenshot_stage_to_content();
+            if (this._destroyed)
+                return;
+            this._content = content;
+            this._scale = scale;
+        }
         this._accent = parseColor(this._settings.get_string('accent-color'));
 
         this._layer = new Layer(this);
@@ -167,7 +174,8 @@ export class CaptureSession {
             source: global.stage,
             coordinate: Clutter.BindCoordinate.ALL,
         }));
-        this._frozen.set_content(content);
+        if (this._content)
+            this._frozen.set_content(this._content);
         // Shown 1:1, so the edited capture keeps the original pixels.
         this._frozen.set_content_scaling_filters(Clutter.ScalingFilter.NEAREST, Clutter.ScalingFilter.NEAREST);
         this._layer.add_child(this._frozen);
@@ -313,6 +321,12 @@ export class CaptureSession {
         this._drag = null;
         if (rect.w < MIN_SIZE || rect.h < MIN_SIZE) {
             this.setRect(null);
+            return Clutter.EVENT_STOP;
+        }
+        if (this._onArea) {
+            const onArea = this._onArea;
+            this.destroy();
+            onArea(rect);
             return Clutter.EVENT_STOP;
         }
         this.setRect(rect);
