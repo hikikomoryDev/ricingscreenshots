@@ -1,7 +1,7 @@
 {
   "uuid": "ricingscreenshots@hikikomoriDev",
   "name": "RicingScreenshots",
-  "description": "Area screenshots straight to the clipboard. Press Print or Shift+Super+S, drag over any part of the screen and the image is copied at once. Then draw on it, add arrows and boxes, highlight or crop it without leaving the desktop. While it is on, it borrows GNOME's Print key (switchable, GNOME's settings are not changed). Super+V records an area as video with the system sound (no microphone); when you stop, save it to Videos or anywhere else, with or without the sound. From the maker of RicingDock.\n\nClipboard access: the extension only writes the screenshots you take to the clipboard. It never reads the clipboard.",
+  "description": "Draw on screenshots and record your screen with sound — all in a few clicks.\n\n• Print or Shift+Super+S: drag over an area and it is copied to the clipboard at once. Then draw on it, add arrows and boxes, highlight or crop it, and copy again.\n• Super+V: pick an area, press Rec, and it records with the system sound (no microphone). Stop from the button by the area, the top bar or Super+V again, then save it to Videos or anywhere else, with or without the sound.\n\nWhile it is on, it borrows GNOME's Print key and Super+V (the notification list stays on Super+M); GNOME's own settings are not changed. From the maker of RicingDock.\n\nClipboard access: the extension only writes the screenshots you take to the clipboard. It never reads the clipboard.",
   "url": "https://github.com/hikikomoryDev/ricingscreenshots",
   "donations": {
     "custom": "https://github.com/hikikomoryDev/ricingscreenshots#support"

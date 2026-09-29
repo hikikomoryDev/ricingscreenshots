@@ -1,14 +1,27 @@
 # RicingScreenshots
 
-Area screenshots for GNOME Shell, straight to the clipboard. Press
-**Print** or **Shift+Super+S**, drag over any part of the screen and the image
-is copied at once. A small card then offers to edit it: draw, point with arrows, box or
-highlight things, crop, and copy again. From the maker of
+**Draw on screenshots and record your screen with sound — all in a few
+clicks.** An extension for GNOME Shell 49 and 50, from the maker of
 [RicingDock](https://github.com/hikikomoryDev/ricingdock).
 
-![The editor: a box, an arrow and a highlight over the captured area](screenshots/editor.png)
+![Drawing on a screenshot, and a recording in progress](screenshots/ego-screenshot.png)
 
-![After a capture: the notification at the top and the Edit card](screenshots/card.png)
+- **Screenshots:** Print or Shift+Super+S, drag over an area, and it is in
+  the clipboard at once. Then draw on it, point with arrows, box or highlight
+  things, crop, and copy again.
+- **Video with sound:** Super+V, pick an area, press Rec. It records with the
+  system sound (what you hear, not the microphone). Stop, then save it to
+  Videos or anywhere else, with or without the sound.
+
+![The editor](screenshots/editor.png)
+
+![After a capture: the notification and the Edit card](screenshots/card.png)
+
+![Picking an area to record](screenshots/rec-start.png)
+
+![Recording: the frame, Stop and the time in the top bar](screenshots/recording.png)
+
+![After stopping: save with or without the sound](screenshots/save.png)
 
 ## How it works
 
