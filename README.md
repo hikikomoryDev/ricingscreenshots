@@ -49,8 +49,12 @@ in the top bar; any of them, or **Super+V** again, stops. A card then offers **S
 **Save as…** (the desktop's own save dialog) or **Discard**, and a switch to
 save it **without sound** (or press M).
 
-The video is recorded by GNOME's own screen recorder, with the sound added;
-the encoder is H.264/MP4 where GStreamer has one, VP8/WebM otherwise. GNOME
+The picture is recorded by GNOME's own screen recorder exactly as GNOME does
+it (hardware H.264/MP4 where there is one, VP8/WebM otherwise). The sound is
+recorded by a small helper process (`helpers/audio.js`, GStreamer) and joined
+to the picture when you save, without re-encoding (`helpers/mux.js`); nothing
+of GStreamer runs inside GNOME Shell. If GNOME's recorder ever stops
+answering, it is ended after 15 seconds so nothing keeps recording unseen. GNOME
 opens the notification list with Super+V and Super+M; while the extension
 is on, Super+M still does, and GNOME's settings are not changed.
 

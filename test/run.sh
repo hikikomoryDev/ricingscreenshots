@@ -9,6 +9,14 @@ NAME=$(basename "$1" .js)
 OUT=$T/out/$NAME
 ROOT=${RSTEST_ROOT:-$HOME/.cache/ricingscreenshots-test}
 rm -rf "$ROOT" "$OUT"
+# The test shell shares the runtime folder with the real session; GNOME's
+# recorder keeps its pipeline crash list there. Put it back afterwards.
+BLOCKLIST=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/gnome-shell-screencast-pipeline-blocklist
+BLOCKLIST_SAVED=$(cat "$BLOCKLIST" 2>/dev/null)
+restore_blocklist() {
+    if [ -n "$BLOCKLIST_SAVED" ]; then printf '%s' "$BLOCKLIST_SAVED" > "$BLOCKLIST"; else rm -f "$BLOCKLIST"; fi
+}
+trap restore_blocklist EXIT
 glib-compile-schemas "$T/../src/schemas"
 mkdir -p "$ROOT"/{data,config,cache}/ "$ROOT/data/gnome-shell/extensions" "$OUT"
 # Recordings go to a Videos folder inside the test root, never the real one.
@@ -26,7 +34,7 @@ elif [ -n "${DEV:-}" ]; then
     D=$ROOT/data/gnome-shell/extensions/ricingscreenshots@hikikomoriDev
     mkdir -p "$D/builds/first"
     cp "$T/../src"/metadata.json "$T/../src"/stylesheet.css "$T/../src"/prefs.js "$T/../src"/util.js "$D"/
-    cp -r "$T/../src"/schemas "$T/../src"/icons "$D"/
+    cp -r "$T/../src"/schemas "$T/../src"/icons "$T/../src"/helpers "$D"/
     cp "$T/../dev/loader.js" "$D/extension.js"
     cp "$T/../src"/*.js "$D/builds/first"/
     echo first > "$D/builds/current"

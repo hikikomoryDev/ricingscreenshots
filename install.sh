@@ -38,10 +38,10 @@ if [ "${1:-}" = "--dev" ]; then
     STAMP=$(date +%Y%m%d-%H%M%S-%N)
     mkdir -p "$DEST/builds/$STAMP"
     find "$DEST" -maxdepth 1 -type f -delete
-    rm -rf "$DEST/schemas" "$DEST/icons"
+    rm -rf "$DEST/schemas" "$DEST/icons" "$DEST/helpers"
     # prefs.js runs in its own process from this folder, with its imports.
     cp "$SRC"/metadata.json "$SRC"/stylesheet.css "$SRC"/prefs.js "$SRC"/util.js "$DEST"/
-    cp -r "$SRC"/schemas "$SRC"/icons "$DEST"/
+    cp -r "$SRC"/schemas "$SRC"/icons "$SRC"/helpers "$DEST"/
     cp "$ROOT/dev/loader.js" "$DEST/extension.js"
     cp "$SRC"/*.js "$DEST/builds/$STAMP"/
     echo "$STAMP" > "$DEST/builds/current"

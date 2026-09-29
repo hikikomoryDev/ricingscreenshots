@@ -6,6 +6,7 @@ export default async function (t) {
     t.ext().record();
     await t.wait(600);
     await t.drag(400, 300, 1000, 700);
+    await t.key(Clutter.KEY_Return, [], 200);
     for (let i = 0; i < 200 && !rec.recording; i++)
         await t.wait(50);
     for (let i = 0; i < 8; i++)
@@ -16,7 +17,7 @@ export default async function (t) {
     t.log(`card: ${rec._state}`);
     rec._saveAs();
     let win;
-    for (let i = 0; i < 90 && !win; i++) {
+    for (let i = 0; i < 150 && !win; i++) {
         await t.wait(500);
         win = global.get_window_actors().map(a => a.meta_window).find(w => /Save/.test(w.get_title() ?? ''));
     }

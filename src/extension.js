@@ -36,7 +36,7 @@ export default class RicingScreenshots extends Extension {
         this._settings.connectObject('changed::take-print', () => this._syncPrint(), this);
         this._syncPrint();
 
-        this._recorder = new Recorder(this._settings);
+        this._recorder = new Recorder(this._settings, this.path);
         this._trayBorrowed = false;
         this._syncTray();
         Main.wm.addKeybinding('record-shortcut', this._settings,

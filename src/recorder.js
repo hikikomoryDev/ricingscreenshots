@@ -17,6 +17,8 @@ import {placeNear} from './place.js';
 import {css, parseColor, textOn} from './util.js';
 
 Gio._promisify(Gio.File.prototype, 'copy_async');
+Gio._promisify(Gio.File.prototype, 'load_contents_async');
+Gio._promisify(Gio.File.prototype, 'replace_contents_async');
 Gio._promisify(Gio.File.prototype, 'delete_async');
 
 const ScreencastProxy = Gio.DBusProxy.makeProxyWrapper(loadInterfaceXML('org.gnome.Shell.Screencast'));
@@ -27,39 +29,128 @@ const FRAME = 2;
 const FRAME_GAP = 4;
 const RED = 'rgb(255,59,48)';
 
-// Encoders, best first. GNOME's recorder films the area and hands the
-// frames to this chain; %T (threads) and %F (framerate) are filled in by it.
-const MP4 = 'mp4mux fragment-duration=500 fragment-mode=first-moov-then-finalise';
-const ENCODERS = [
-    {id: 'h264-va', ext: 'mp4', mux: MP4, video: 'vapostproc ! vah264enc ! h264parse'},
-    {
-        id: 'h264-openh264', ext: 'mp4', mux: MP4,
-        video: 'videoconvert chroma-mode=none dither=none matrix-mode=output-only n-threads=%T ! queue ! ' +
-            'openh264enc deblocking=off background-detection=false complexity=low adaptive-quantization=false ' +
-            'qp-max=26 qp-min=26 multi-thread=%T slice-mode=auto ! h264parse',
-    },
-    {
-        id: 'vp8', ext: 'webm', mux: 'webmmux',
-        video: 'videoconvert chroma-mode=none dither=none matrix-mode=output-only n-threads=%T ! queue ! ' +
-            'vp8enc cpu-used=16 max-quantizer=17 deadline=1 keyframe-mode=auto keyframe-max-dist=60 threads=%T ' +
-            'static-threshold=1000 buffer-size=20000',
-    },
-];
-// The system sound: what plays through the default output, no microphone.
-const SYSTEM_SOUND = 'pulsesrc device=@DEFAULT_MONITOR@ do-timestamp=true ! queue ! audioconvert ! ' +
-    'audioresample ! audio/x-raw,rate=48000,channels=2 ! opusenc bitrate=128000 ! queue';
+// Past this, a stop that hangs is ended by force so a recording never runs
+// on unseen (it once kept going for an hour).
+const STOP_TIMEOUT = 15;
 
-// One encoding, two files: the video is split after the encoder into the
-// file with sound (GNOME's recorder adds its filesink after the last
-// element, the muxer) and a silent copy, so "without sound" at save time
-// needs no re-encoding.
-function pipelineFor(encoder, silentPath) {
-    const quoted = silentPath.replaceAll('"', '\\"');
-    return `${encoder.video} ! tee name=rsv ` +
-        `rsv. ! queue ! rsmux. ` +
-        `rsv. ! queue ! ${encoder.mux} ! filesink location="${quoted}" ` +
-        `${SYSTEM_SOUND} ! rsmux. ` +
-        `${encoder.mux} name=rsmux`;
+Gio._promisify(Gio.Subprocess.prototype, 'wait_async');
+Gio._promisify(Gio.DataInputStream.prototype, 'read_line_async', 'read_line_finish_utf8');
+
+function gjs() {
+    return GLib.find_program_in_path('gjs') ?? '/usr/bin/gjs';
+}
+
+function sleep(seconds) {
+    return new Promise(resolve => GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, seconds, () => {
+        resolve('timeout');
+        return GLib.SOURCE_REMOVE;
+    }));
+}
+
+// Ends GNOME's recording service when it no longer answers, and resolves
+// once it is gone, so what it wrote so far can still be kept. D-Bus starts
+// a fresh one the next time.
+function killScreencastService() {
+    return new Promise(resolve => Gio.DBus.session.call('org.freedesktop.DBus', '/org/freedesktop/DBus',
+        'org.freedesktop.DBus', 'GetConnectionUnixProcessID', new GLib.Variant('(s)', ['org.gnome.Shell.Screencast']),
+        new GLib.VariantType('(u)'), Gio.DBusCallFlags.NONE, -1, null, async (c, res) => {
+            try {
+                const [pid] = c.call_finish(res).deepUnpack();
+                console.warn(`RicingScreenshots: recording service ${pid} did not stop, ending it`);
+                await Gio.Subprocess.new(['kill', String(pid)], Gio.SubprocessFlags.NONE).wait_async(null);
+                for (let i = 0; i < 20 && GLib.file_test(`/proc/${pid}`, GLib.FileTest.EXISTS); i++)
+                    await sleepMs(100);
+            } catch (e) {
+                logError(e, 'RicingScreenshots: ending the recording service');
+            }
+            resolve();
+        }));
+}
+
+// GNOME's recorder notes a pipeline as "crashed" when it starts one and
+// clears the note when it stops cleanly. Ending it by force would leave the
+// note, and GNOME would skip that pipeline from then on (with no other one,
+// all recording breaks, GNOME's own included), so the note is put back as
+// it was before the recording.
+const BLOCKLIST = GLib.build_filenamev([GLib.get_user_runtime_dir(), 'gnome-shell-screencast-pipeline-blocklist']);
+
+async function readBlocklist() {
+    try {
+        const [contents] = await Gio.File.new_for_path(BLOCKLIST).load_contents_async(null);
+        return contents;
+    } catch {
+        return null;
+    }
+}
+
+async function restoreBlocklist(contents) {
+    const file = Gio.File.new_for_path(BLOCKLIST);
+    try {
+        if (contents?.length) {
+            await file.replace_contents_async(contents, null, false,
+                Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+        } else {
+            await file.delete_async(GLib.PRIORITY_DEFAULT, null);
+        }
+    } catch {
+    }
+}
+
+function sleepMs(ms) {
+    return new Promise(done => GLib.timeout_add(GLib.PRIORITY_DEFAULT, ms, () => {
+        done();
+        return GLib.SOURCE_REMOVE;
+    }));
+}
+
+// The system sound, recorded by helpers/audio.js in its own process (the
+// helpers are run with gjs, not imported, so GStreamer never loads into
+// the shell): GNOME
+// films the picture, this adds what you hear. Nothing here can hang the
+// recording; at worst the video is saved without sound.
+class SoundRecorder {
+    constructor(helper, file) {
+        this.file = file;
+        this.firstUs = 0;
+        this.failed = false;
+        this._proc = Gio.Subprocess.new([gjs(), '-m', helper, file.get_path()],
+            Gio.SubprocessFlags.STDIN_PIPE | Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE);
+        this._readLines(new Gio.DataInputStream({base_stream: this._proc.get_stdout_pipe()}));
+    }
+
+    async _readLines(stream) {
+        try {
+            for (;;) {
+                // GNOME Shell may have promisified this already, returning
+                // bytes instead of text.
+                const [raw] = await stream.read_line_async(GLib.PRIORITY_DEFAULT, null);
+                if (raw === null)
+                    return;
+                const line = typeof raw === 'string' ? raw : new TextDecoder().decode(raw);
+                if (line.startsWith('FIRST '))
+                    this.firstUs = Number(line.slice(6));
+                else if (line.startsWith('ERROR'))
+                    this.failed = true;
+            }
+        } catch {
+        }
+    }
+
+    async stop() {
+        try {
+            const stdin = this._proc.get_stdin_pipe();
+            stdin.write_all(new TextEncoder().encode('stop\n'), null);
+            stdin.close(null);
+        } catch {
+        }
+        const result = await Promise.race([this._proc.wait_async(null), sleep(8)]);
+        if (result === 'timeout')
+            this._proc.force_exit();
+    }
+
+    get ok() {
+        return !this.failed && this.firstUs > 0 && sizeOf(this.file) > 0;
+    }
 }
 
 function videosDir() {
@@ -174,13 +265,14 @@ class RicingScreenshotsCardLayer extends St.Widget {
 });
 
 export class Recorder {
-    constructor(settings) {
+    constructor(settings, path) {
         this._settings = settings;
+        this._helpers = `${path}/helpers`;
         this._state = 'idle';
         this._muted = false;
     }
 
-    // Starting, recording, stopping or waiting for a save decision.
+    // Starting, recording, stopping, waiting for a save decision or saving.
     get busy() {
         return this._state !== 'idle';
     }
@@ -215,38 +307,6 @@ export class Recorder {
         return this._proxyPromise;
     }
 
-    // Tries the encoders (the one that worked last time first), each with
-    // the system sound; if none takes, records without sound as GNOME does.
-    async _startService(rect, options) {
-        const proxy = await this._getProxy();
-        const dir = videosDir();
-        const base = `.ricingscreenshots-${GLib.DateTime.new_now_local().format('%Y%m%d-%H%M%S')}`;
-        const known = this._settings.get_string('record-pipeline');
-        const order = [...ENCODERS].sort((a, b) => (b.id === known) - (a.id === known));
-        for (const encoder of order) {
-            const silent = Gio.File.new_for_path(GLib.build_filenamev([dir, `${base}-silent.${encoder.ext}`]));
-            try {
-                const [ok, path] = await proxy.ScreencastAreaAsync(rect.x, rect.y, rect.w, rect.h,
-                    GLib.build_filenamev([dir, base]),
-                    {...options, 'pipeline': new GLib.Variant('s', pipelineFor(encoder, silent.get_path()))});
-                if (!ok)
-                    throw new Error('refused');
-                if (known !== encoder.id)
-                    this._settings.set_string('record-pipeline', encoder.id);
-                return {file: Gio.File.new_for_path(path), silent, ext: encoder.ext, sound: true};
-            } catch (e) {
-                console.log(`RicingScreenshots: encoder ${encoder.id} with sound did not start: ${e.message}`);
-                remove(silent);
-            }
-        }
-        const [ok, path] = await proxy.ScreencastAreaAsync(rect.x, rect.y, rect.w, rect.h,
-            GLib.build_filenamev([dir, base]), options);
-        if (!ok)
-            throw new Error('the screencast service said no');
-        const file = Gio.File.new_for_path(path);
-        return {file, silent: null, ext: file.get_basename().split('.').pop(), sound: false};
-    }
-
     async start(rect) {
         if (this._state !== 'idle')
             return;
@@ -261,18 +321,34 @@ export class Recorder {
             resolve();
             return GLib.SOURCE_REMOVE;
         }));
+        this._blocklist = await readBlocklist();
+        const base = GLib.build_filenamev([videosDir(),
+            `.ricingscreenshots-${GLib.DateTime.new_now_local().format('%Y%m%d-%H%M%S')}`]);
         try {
-            this._take = await this._startService(rect, options);
-            console.log(`RicingScreenshots: recording ${rect.w}x${rect.h} ${this._take.ext}, sound ${this._take.sound}`);
+            // GNOME's own recorder, as it is: it picks the encoder (hardware
+            // H.264 where there is one) and its stop is well proven.
+            const [ok, path] = await (await this._getProxy()).ScreencastAreaAsync(
+                rect.x, rect.y, rect.w, rect.h, base, options);
+            if (!ok)
+                throw new Error('the screencast service said no');
+            const video = Gio.File.new_for_path(path);
+            this._take = {video, ext: video.get_basename().split('.').pop(), startUs: GLib.get_real_time(), sound: null};
         } catch (e) {
             logError(e, 'RicingScreenshots: could not start recording');
             this._state = 'idle';
             notify('Recording failed to start', e.message ?? String(e));
             return;
         }
+        try {
+            this._take.sound = new SoundRecorder(`${this._helpers}/audio.js`,
+                Gio.File.new_for_path(`${base}-sound.mka`));
+        } catch (e) {
+            logError(e, 'RicingScreenshots: no system sound for this recording');
+        }
+        console.log(`RicingScreenshots: recording ${rect.w}x${rect.h} ${this._take.ext}, sound ${!!this._take.sound}`);
         if (this._state !== 'starting') {
             // Stopped (or turned off) while starting: nothing worth keeping.
-            await this._stopService();
+            await this._stopEverything();
             this._dropTake();
             this._state = 'idle';
             return;
@@ -332,12 +408,24 @@ export class Recorder {
         await this._finish(false);
     }
 
-    async _stopService() {
-        try {
-            await (await this._getProxy()).StopScreencastAsync();
-        } catch (e) {
-            logError(e, 'RicingScreenshots: stopping the recording');
-        }
+    // Stops the picture and the sound. A service that doesn't answer within
+    // STOP_TIMEOUT seconds is ended, so nothing keeps recording in secret.
+    async _stopEverything(serviceStopped = false) {
+        const picture = serviceStopped ? Promise.resolve() : (async () => {
+            try {
+                const proxy = await this._getProxy();
+                const result = await Promise.race([proxy.StopScreencastAsync(), sleep(STOP_TIMEOUT)]);
+                if (result === 'timeout') {
+                    await killScreencastService();
+                    await restoreBlocklist(this._blocklist);
+                }
+            } catch (e) {
+                logError(e, 'RicingScreenshots: stopping the recording');
+                await killScreencastService();
+                await restoreBlocklist(this._blocklist);
+            }
+        })();
+        await Promise.all([picture, this._take?.sound?.stop()]);
     }
 
     _clearRecordingUi() {
@@ -355,29 +443,33 @@ export class Recorder {
     }
 
     _dropTake() {
-        remove(this._take?.file);
-        remove(this._take?.silent);
+        remove(this._take?.video);
+        remove(this._take?.sound?.file);
         this._take = null;
     }
 
     async _finish(failed) {
         this._state = 'stopping';
         this._clearRecordingUi();
-        if (!failed)
-            await this._stopService();
-        if (!this._take?.file.query_exists(null)) {
+        await this._stopEverything(failed);
+        if (!this._take?.video.query_exists(null) || sizeOf(this._take.video) === 0) {
             this._dropTake();
             this._state = 'idle';
             notify('Recording failed', 'Nothing was saved');
             return;
         }
-        if (this._take.silent && !this._take.silent.query_exists(null))
-            this._take.silent = null;
+        const {sound, startUs} = this._take;
+        if (sound && !sound.ok) {
+            remove(sound.file);
+            this._take.sound = null;
+        }
+        // Where the sound starts relative to the first frame.
+        this._take.delayUs = this._take.sound ? Math.max(0, sound.firstUs - startUs) : 0;
+        this._muted = false;
         if (this._disabled) {
             this._saveToVideos();
             return;
         }
-        this._muted = false;
         this._showCard();
     }
 
@@ -395,11 +487,11 @@ export class Recorder {
         });
         card.add_child(new St.Label({text: 'Recording stopped', style_class: 'rs-card-title'}));
         card.add_child(new St.Label({
-            text: `${formatTime(this._seconds)} · ${formatSize(sizeOf(this._take.file))}` +
+            text: `${formatTime(this._seconds)} · ${formatSize(sizeOf(this._take.video))}` +
                 (this._take.sound ? '' : ' · no sound'),
             style_class: 'rs-card-info',
         }));
-        if (this._take.silent) {
+        if (this._take.sound) {
             // Sound stays unless switched off here, before choosing where.
             const icon = new St.Icon({icon_size: 16});
             const label = new St.Label({y_align: Clutter.ActorAlign.CENTER});
@@ -464,32 +556,64 @@ export class Recorder {
         return Clutter.EVENT_PROPAGATE;
     }
 
-    // The file to keep, per the sound switch; the other one goes.
-    _pick() {
-        const {file, silent} = this._take;
-        if (this._muted && silent) {
-            remove(file);
-            return silent;
+    // Writes the final file: the picture with the sound joined in by
+    // helpers/mux.js (no re-encoding), or the picture alone when muted.
+    // Falls back to the picture alone if joining fails.
+    async _write(target) {
+        const {video, sound, delayUs} = this._take;
+        let joined = false;
+        if (sound && !this._muted) {
+            try {
+                const proc = Gio.Subprocess.new([gjs(), '-m', `${this._helpers}/mux.js`,
+                    video.get_path(), sound.file.get_path(), String(delayUs), target.get_path()],
+                Gio.SubprocessFlags.STDERR_SILENCE);
+                await proc.wait_async(null);
+                joined = proc.get_successful() && sizeOf(target) > 0;
+            } catch (e) {
+                logError(e, 'RicingScreenshots: joining the sound');
+            }
+            if (!joined)
+                remove(target);
         }
-        remove(silent);
-        return file;
+        if (joined) {
+            remove(video);
+        } else {
+            try {
+                // A rename when it stays on the same disk...
+                video.move(target, Gio.FileCopyFlags.OVERWRITE | Gio.FileCopyFlags.NO_FALLBACK_FOR_MOVE, null, null);
+            } catch (e) {
+                if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_SUPPORTED))
+                    throw e;
+                // ...otherwise a copy that doesn't block the desktop.
+                await video.copy_async(target, Gio.FileCopyFlags.OVERWRITE, GLib.PRIORITY_DEFAULT, null, null);
+                await video.delete_async(GLib.PRIORITY_DEFAULT, null);
+            }
+        }
+        remove(sound?.file);
+        return sound && !this._muted && !joined ? 'the sound could not be added' : null;
     }
 
-    _saveToVideos() {
-        this._closeCard();
-        const source = this._pick();
-        const target = freeFile(videosDir(), `Recording ${stamp()}`, this._take.ext);
+    async _save(target, shownAs) {
+        this._state = 'saving';
         try {
-            // Same folder: a rename, instant at any size.
-            source.move(target, Gio.FileCopyFlags.NONE, null, null);
-            notify('Recording saved', `Videos/${target.get_basename()}`, target);
-            console.log(`RicingScreenshots: saved ${target.get_path()}`);
+            const problem = await this._write(target);
+            notify('Recording saved', problem ? `${shownAs} (${problem})` : shownAs, target);
+            console.log(`RicingScreenshots: saved ${target.get_path()}${problem ? `, ${problem}` : ''}`);
+            this._take = null;
+            this._state = 'idle';
+            return true;
         } catch (e) {
             logError(e, 'RicingScreenshots: saving the recording');
             notify('Could not save the recording', e.message);
+            return false;
         }
-        this._take = null;
-        this._state = 'idle';
+    }
+
+    async _saveToVideos() {
+        this._closeCard();
+        const target = freeFile(videosDir(), `Recording ${stamp()}`, this._take.ext);
+        if (!await this._save(target, `Videos/${target.get_basename()}`))
+            this._state = 'idle';
     }
 
     async _saveAs() {
@@ -503,7 +627,7 @@ export class Recorder {
             notify('Could not open the file chooser', e.message);
         }
         if (this._disabled) {
-            this._saveToVideos();
+            await this._saveToVideos();
             return;
         }
         if (!uri) {
@@ -511,29 +635,9 @@ export class Recorder {
             this._showCard();
             return;
         }
-        const source = this._pick();
-        this._take = {...this._take, file: source, silent: null};
         const target = Gio.File.new_for_uri(uri);
-        try {
-            try {
-                // A rename when it stays on the same disk...
-                source.move(target, Gio.FileCopyFlags.OVERWRITE | Gio.FileCopyFlags.NO_FALLBACK_FOR_MOVE, null, null);
-            } catch (e) {
-                if (!e.matches(Gio.IOErrorEnum, Gio.IOErrorEnum.NOT_SUPPORTED))
-                    throw e;
-                // ...otherwise a copy that doesn't block the desktop.
-                await source.copy_async(target, Gio.FileCopyFlags.OVERWRITE, GLib.PRIORITY_DEFAULT, null, null);
-                await source.delete_async(GLib.PRIORITY_DEFAULT, null);
-            }
-            notify('Recording saved', target.get_path() ?? uri, target);
-            console.log(`RicingScreenshots: saved ${target.get_path()}`);
-            this._take = null;
-            this._state = 'idle';
-        } catch (e) {
-            logError(e, 'RicingScreenshots: saving the recording');
-            notify('Could not save there', e.message);
+        if (!await this._save(target, target.get_path() ?? uri))
             this._showCard();
-        }
     }
 
     _discard() {
@@ -554,7 +658,7 @@ export class Recorder {
             this._finish(false).catch(e => logError(e));
             break;
         case 'card':
-            this._saveToVideos();
+            this._saveToVideos().catch(e => logError(e));
             break;
         }
         if (this._proxy && this._errorId)
@@ -587,7 +691,9 @@ function chooseSaveFile(name, folder) {
         bus.call('org.freedesktop.portal.Desktop', '/org/freedesktop/portal/desktop',
             'org.freedesktop.portal.FileChooser', 'SaveFile',
             new GLib.Variant('(ssa{sv})', ['', 'Save recording', options]),
-            new GLib.VariantType('(o)'), Gio.DBusCallFlags.NONE, -1, null, (c, res) => {
+            // The call only waits for the portal to start, which can be slow
+            // the first time; the answer itself comes later as a signal.
+            new GLib.VariantType('(o)'), Gio.DBusCallFlags.NONE, 60 * 1000, null, (c, res) => {
                 try {
                     c.call_finish(res);
                 } catch (e) {

@@ -34,7 +34,7 @@ export default async function (t) {
         }
         for (let i = 0; i < 200 && !rec.recording; i++)
             await t.wait(50);
-        t.log(`  recording=${rec.recording} sound=${rec._take?.sound} ext=${rec._take?.ext}`);
+        t.log(`  recording=${rec.recording} sound=${!!rec._take?.sound} ext=${rec._take?.ext}`);
         for (let i = 0; i < 12; i++)
             await t.move(600 + i * 50, 400 + (i % 3) * 60, 250);
         if (label === 'first')
