@@ -1,7 +1,7 @@
 {
   "uuid": "ricingscreenshots@hikikomoriDev",
   "name": "RicingScreenshots",
-  "description": "Area screenshots straight to the clipboard. Press Shift+Super+S, drag over any part of the screen and the image is copied at once. Then draw on it, add arrows and boxes, highlight or crop it without leaving the desktop. From the maker of RicingDock.\n\nClipboard access: the extension only writes the screenshots you take to the clipboard. It never reads the clipboard.",
+  "description": "Area screenshots straight to the clipboard. Press Print or Shift+Super+S, drag over any part of the screen and the image is copied at once. Then draw on it, add arrows and boxes, highlight or crop it without leaving the desktop. While it is on, it borrows GNOME's Print key (switchable, GNOME's settings are not changed). From the maker of RicingDock.\n\nClipboard access: the extension only writes the screenshots you take to the clipboard. It never reads the clipboard.",
   "url": "https://github.com/hikikomoryDev/ricingscreenshots",
   "donations": {
     "custom": "https://github.com/hikikomoryDev/ricingscreenshots#support"

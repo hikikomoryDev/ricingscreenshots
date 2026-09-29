@@ -11,35 +11,6 @@ import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/ex
 import {parseColor} from './util.js';
 
 const DEFAULT_SHORTCUT = '<Shift><Super>s';
-// GNOME's own screenshot keys, freed when the Print key is taken over.
-const GNOME_KEYS = ['show-screenshot-ui', 'screenshot', 'screenshot-window'];
-
-// The shortcut list holds the main shortcut and, when taken over, Print.
-function mainShortcut(settings) {
-    return settings.get_strv('shortcut').find(a => a !== 'Print') ?? '';
-}
-
-function hasPrint(settings) {
-    return settings.get_strv('shortcut').includes('Print');
-}
-
-function setShortcuts(settings, main, print) {
-    settings.set_strv('shortcut', [...(main ? [main] : []), ...(print ? ['Print'] : [])]);
-}
-
-// Print goes to RicingScreenshots and GNOME's screenshot keys are cleared,
-// or Print goes back and GNOME's keys return to their defaults.
-function takePrint(settings, take) {
-    const gnome = new Gio.Settings({schema_id: 'org.gnome.shell.keybindings'});
-    for (const key of GNOME_KEYS) {
-        if (take)
-            gnome.set_strv(key, []);
-        else
-            gnome.reset(key);
-    }
-    setShortcuts(settings, mainShortcut(settings), take);
-}
-
 export default class RicingScreenshotsPrefs extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
@@ -55,18 +26,9 @@ export default class RicingScreenshotsPrefs extends ExtensionPreferences {
         });
         page.add(capture);
         capture.add(this._shortcutRow(window, settings));
-        const print = new Adw.SwitchRow({
-            title: 'Use the Print key',
-            subtitle: 'Print takes an area screenshot here. GNOME’s own screenshot keys ' +
-                '(Print, Shift+Print, Alt+Print) are switched off; turning this off gives them back',
-        });
-        print.active = hasPrint(settings);
-        print.connect('notify::active', () => {
-            if (print.active !== hasPrint(settings))
-                takePrint(settings, print.active);
-        });
-        settings.connect('changed::shortcut', () => (print.active = hasPrint(settings)));
-        capture.add(print);
+        capture.add(this._switch(settings, 'take-print', 'Use the Print key',
+            'Print opens RicingScreenshots instead of GNOME’s screenshot tool. ' +
+            'Turn off to give it back; GNOME’s settings are never changed'));
         capture.add(this._switch(settings, 'ask-to-edit', 'Offer to edit',
             'After a capture, a card by the area asks whether to draw on it or crop it'));
         capture.add(this._switch(settings, 'show-notification', 'Notification',
@@ -137,7 +99,7 @@ export default class RicingScreenshotsPrefs extends ExtensionPreferences {
             valign: Gtk.Align.CENTER,
         });
         const sync = () => {
-            label.accelerator = mainShortcut(settings);
+            label.accelerator = settings.get_strv('shortcut')[0] ?? '';
         };
         sync();
         settings.connect('changed::shortcut', sync);
@@ -147,7 +109,7 @@ export default class RicingScreenshotsPrefs extends ExtensionPreferences {
             tooltip_text: 'Back to Shift+Super+S',
             css_classes: ['flat'],
         });
-        reset.connect('clicked', () => setShortcuts(settings, DEFAULT_SHORTCUT, hasPrint(settings)));
+        reset.connect('clicked', () => settings.set_strv('shortcut', [DEFAULT_SHORTCUT]));
         row.add_suffix(label);
         row.add_suffix(reset);
         row.connect('activated', () => this._askShortcut(window, settings));
@@ -186,13 +148,13 @@ export default class RicingScreenshotsPrefs extends ExtensionPreferences {
                 return Gdk.EVENT_STOP;
             }
             if (!mask && lower === Gdk.KEY_BackSpace) {
-                setShortcuts(settings, '', hasPrint(settings));
+                settings.set_strv('shortcut', []);
                 dialog.close();
                 return Gdk.EVENT_STOP;
             }
             // Print alone is the switch below the shortcut.
             if (!mask && lower === Gdk.KEY_Print) {
-                takePrint(settings, true);
+                settings.set_boolean('take-print', true);
                 dialog.close();
                 return Gdk.EVENT_STOP;
             }
@@ -205,7 +167,7 @@ export default class RicingScreenshotsPrefs extends ExtensionPreferences {
                 return Gdk.EVENT_STOP;
             if (!Gtk.accelerator_valid(lower, mask) && !standalone)
                 return Gdk.EVENT_STOP;
-            setShortcuts(settings, Gtk.accelerator_name_with_keycode(null, lower, keycode, mask), hasPrint(settings));
+            settings.set_strv('shortcut', [Gtk.accelerator_name_with_keycode(null, lower, keycode, mask)]);
             dialog.close();
             return Gdk.EVENT_STOP;
         });

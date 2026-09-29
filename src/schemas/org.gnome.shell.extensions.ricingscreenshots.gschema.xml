@@ -5,6 +5,11 @@
       <default><![CDATA[['<Shift><Super>s']]]></default>
       <summary>Shortcut that starts an area screenshot</summary>
     </key>
+    <key name="take-print" type="b">
+      <default>true</default>
+      <summary>Print opens RicingScreenshots instead of GNOME's screenshot tool</summary>
+      <description>Borrows whatever key GNOME uses to take a screenshot while the extension is on; GNOME's settings are not changed.</description>
+    </key>
     <key name="accent-color" type="s">
       <default>'rgb(110,231,200)'</default>
       <summary>Color of the selection frame and the active tool</summary>

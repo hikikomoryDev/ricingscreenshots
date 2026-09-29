@@ -1,8 +1,8 @@
 # RicingScreenshots
 
 Area screenshots for GNOME Shell, straight to the clipboard. Press
-**Shift+Super+S**, drag over any part of the screen and the image is copied at
-once. A small card then offers to edit it: draw, point with arrows, box or
+**Print** or **Shift+Super+S**, drag over any part of the screen and the image
+is copied at once. A small card then offers to edit it: draw, point with arrows, box or
 highlight things, crop, and copy again. From the maker of
 [RicingDock](https://github.com/hikikomoryDev/ricingdock).
 
@@ -12,7 +12,7 @@ highlight things, crop, and copy again. From the maker of
 
 ## How it works
 
-1. **Shift+Super+S** freezes the screen. Drag over the area you want.
+1. **Print** or **Shift+Super+S** freezes the screen. Drag over the area you want.
    Esc or a right click cancels.
 2. The area is in the clipboard as soon as you let go; a notification says so.
 3. A card by the area asks: **Edit** (or Enter) opens the editor, **Close**
@@ -28,7 +28,11 @@ inside, or drag a new frame outside it. Drawings stay pinned to the picture.
 
 ## Settings
 
-Shortcut, whether to offer editing, the notification, the shutter sound,
+Out of the box RicingScreenshots borrows GNOME's screenshot key (Print) while
+it is on; GNOME's own settings are never changed, and turning the
+extension or the *Use the Print key* switch off gives the key back.
+
+Also: the second shortcut, whether to offer editing, the notification, the shutter sound,
 the accent color and how much the rest of the screen is darkened.
 
 ## Privacy
