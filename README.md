@@ -113,7 +113,7 @@ Send only through the Solana network; the same tokens sent over Ethereum,
 Tron, BNB Chain or any other network will be lost.
 
 ```
-JG5nXAEqFaBvMttK59hN1qquNHUxJhF7AAmPYkZ8Gci
+EvYjYTSdAbUm5hfTGqb6D5jhf1jcgRQ5JVKHJFRzkvyK
 ```
 
 ## License
