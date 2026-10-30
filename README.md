@@ -81,6 +81,12 @@ One line installs the latest release for your user:
 curl -fsSL https://raw.githubusercontent.com/hikikomoryDev/ricingscreenshots/main/get.sh | bash
 ```
 
+No curl on a fresh system? The same with wget:
+
+```
+wget -qO- https://raw.githubusercontent.com/hikikomoryDev/ricingscreenshots/main/get.sh | bash
+```
+
 Then log out and back in: GNOME on Wayland only loads new extensions at
 login.
 
