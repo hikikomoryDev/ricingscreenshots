@@ -75,15 +75,24 @@ when you save a recording.
 
 ## Install
 
-From [extensions.gnome.org](https://extensions.gnome.org/) (search for
-RicingScreenshots), or from a release zip:
+One line installs the latest release for your user:
+
+```
+curl -fsSL https://raw.githubusercontent.com/hikikomoryDev/ricingscreenshots/main/get.sh | bash
+```
+
+Then log out and back in: GNOME on Wayland only loads new extensions at
+login.
+
+Or by hand: download `ricingscreenshots@hikikomoriDev.shell-extension.zip`
+from the [latest release](https://github.com/hikikomoryDev/ricingscreenshots/releases/latest),
+then
 
 ```
 gnome-extensions install --force ricingscreenshots@hikikomoriDev.shell-extension.zip
 ```
 
-then log out and back in (GNOME on Wayland only loads new extensions at
-login) and enable it in Extensions.
+log out and back in, and enable it in Extensions.
 
 ## Compatibility
 
@@ -93,7 +102,7 @@ GNOME Shell 49 and 50.
 
 ```
 ./install.sh --dev        # install through a loader: later runs reload in place
-./pack.sh                 # build the zip for extensions.gnome.org into dist/
+./pack.sh                 # build the release zip into dist/
 test/run.sh scenarios/edit.js                  # one scenario, headless GNOME 50
 test/podman.sh 49 scenarios/edit.js            # the same on GNOME 49
 test/suite.sh 50                               # every scenario
